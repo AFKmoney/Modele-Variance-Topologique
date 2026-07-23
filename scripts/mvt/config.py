@@ -2,7 +2,7 @@
 Configuration globale du MVT.
 ===============================
 Définit les hyperparamètres de l'espace topologique, du lagrangien,
-de la plasticité et de l'encodeur.
+de la plasticité, de l'encodeur, et NOUVEAU : de l'agentivité et de la créativité.
 """
 
 from dataclasses import dataclass, field
@@ -13,23 +13,6 @@ from typing import List, Tuple, Optional
 class MVTConfig:
     """
     Configuration complète du Modèle à Variance Topologique.
-
-    Attributes:
-        ambient_dim: Dimensionnalité N de l'espace ambiant R^N.
-                      Chaque concept est un point dans cet espace.
-        intrinsic_dim: Dimension intrinsèque de la variété sémantique.
-        dt: Pas de temps pour l'intégration RK4.
-        num_rk4_steps: Nombre de pas d'intégration par génération.
-        alpha_erosion: Taux d'érosion topologique (barrières aux erreurs).
-        beta_sedimentation: Taux de sédimentation (renforcement des succès).
-        syntopy_strength: Force de l'opérateur de syntopie (fusion ★).
-        potential_stiffness: Raideur du potentiel de contrainte V.
-        kinetic_coupling: Couplage de l'énergie cinétique sémantique T.
-        vocabulary_size: Taille du vocabulaire de projection.
-        embedding_dim: Dimension des embeddings de base pour l'encodage.
-        curvature_threshold: Seuil de courbure pour détecter les singularités.
-        divergence_threshold: Seuil de divergence pour arrêter la génération.
-        seed: Graine aléatoire pour la reproductibilité.
     """
 
     # === Dimensions de l'espace ===
@@ -49,15 +32,36 @@ class MVTConfig:
     syntopy_strength: float = 1.0
     potential_stiffness: float = 2.0
     kinetic_coupling: float = 1.0
+    damping: float = 0.05  # Amortissement (baissé = plus fluide/creatif)
 
     # === Paramètres de l'encodeur ===
     vocabulary_size: int = 10000
     embedding_dim: int = 128
     max_seq_length: int = 1024
 
-    # === Seuils de stabilité ===
-    curvature_threshold: float = 10.0
-    divergence_threshold: float = 1e6
+    # === Seuils de stabilité (RELÂCHÉS pour créativité) ===
+    curvature_threshold: float = 100.0       # Très élevé = peu de blocages
+    divergence_threshold: float = 1e8         # Très élevé = exploration libre
+
+    # === CRÉATIVITÉ ===
+    temperature: float = 0.8       # Température stochastique (0=déterministe, 1=très créatif)
+    novelty_bias: float = 0.4     # Biais vers la nouveauté (0=safe, 1=explorateur)
+    metaphor_jump_prob: float = 0.1   # Probabilité de saut métaphorique
+    metaphor_jump_strength: float = 0.3  # Amplitude du saut dans l'espace
+    creativity_noise_scale: float = 0.15  # Bruit injecté dans le lagrangien
+
+    # === AGENTIC ===
+    max_agent_iterations: int = 5   # Itérations max de la boucle d'agent
+    self_reflection_threshold: float = 0.5  # Seuil de satisfaction de l'agent
+    goal_steering_strength: float = 0.3  # Force d'attraction vers le but
+    branching_factor: int = 3  # Nombre de trajectoires parallèles à explorer
+    replan_probability: float = 0.3  # Probabilité de replanification
+
+    # === Projection créative ===
+    projection_temperature: float = 0.7  # Température de sélection de mots (soft-max like)
+    diversity_penalty: float = 0.3  # Pénalité pour les répétitions
+    max_consecutive_repeat: int = 2  # Max répétitions consécutives autorisées
+    sample_rate: int = 3  # Échantillonner tous les N pas
 
     # === Reproductibilité ===
     seed: Optional[int] = 42
