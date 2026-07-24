@@ -192,31 +192,51 @@ class KuramotoMetricCoupler:
 
     La métrique devient de la mémoire morphologique : chaque step d'intégration
     modifie G en même temps que la trajectoire évolue.
+
+    **Architecture**: wraps a MetricTensor and exposes it as `.metric`.
+    All existing MVT modules that reference `.metric` continue to work
+    unchanged. After each `coupled_step()`, the underlying MetricTensor.G
+    is updated in-place via NatGrad SPD.
+
+    Usage:
+        coupler = KuramotoMetricCoupler(mvt_config)
+        # coupler.metric is a full MetricTensor (backward compatible)
+        # All modules receive coupler.metric as before
+        # During generation, call coupler.coupled_step(q, dq) to evolve G
     """
 
     def __init__(
         self,
         mvt_config: Optional[MVTConfig] = None,
         kura_config: Optional[KuramotoMetricConfig] = None,
-        G: Optional[np.ndarray] = None,
+        metric: Optional['MetricTensor'] = None,
     ):
         mvt_config = mvt_config or MVTConfig()
         self.mvt_config = mvt_config
 
         if kura_config is None:
-            kura_config = KuramotoMetricConfig(N=mvt_config.ambient_dim)
+            n_osc = mvt_config.kuramoto_n_oscillators or mvt_config.ambient_dim
+            kura_config = KuramotoMetricConfig(
+                N=mvt_config.ambient_dim,
+                n_oscillators=n_osc,
+                K_coupling=mvt_config.kuramoto_coupling_K,
+                metric_lr=mvt_config.kuramoto_metric_lr,
+                retraction_order=mvt_config.kuramoto_retraction,
+                phase_metric_coupling=mvt_config.kuramoto_phase_coupling,
+                phase_init=mvt_config.kuramoto_phase_init,
+                dt_kuramoto=mvt_config.dt,
+            )
         self.kura_config = kura_config
 
-        # Initialiser G si non fourni
-        if G is None:
-            N = mvt_config.ambient_dim
-            self.G = np.eye(N, dtype=np.float64)
-            perturbation = np.random.randn(N, N) * 0.01
-            self.G += 0.5 * (perturbation + perturbation.T)
-        else:
-            self.G = G.copy()
+        # === WRAP MetricTensor (backward compatibility) ===
+        from .core.metric_tensor import MetricTensor
 
-        # Sous-systèmes
+        if metric is not None:
+            self.metric = metric
+        else:
+            self.metric = MetricTensor(mvt_config)
+
+        # Sous-systèmes Kuramoto + NatGrad
         self.kuramoto = KuramotoDynamics(kura_config, seed=mvt_config.seed)
         self.nat_grad = NaturalGradientSPD(
             lr=kura_config.metric_lr,
@@ -227,6 +247,20 @@ class KuramotoMetricCoupler:
         # État
         self._step_count = 0
         self._metrics_history: list[dict] = []
+
+    # ================================================================
+    # Property: delegate .G to the wrapped MetricTensor
+    # ================================================================
+
+    @property
+    def G(self) -> np.ndarray:
+        """Accès direct au tenseur métrique (délégué au MetricTensor wrappé)."""
+        return self.metric.G
+
+    @G.setter
+    def G(self, value: np.ndarray):
+        """Mise à jour du tenseur métrique dans le MetricTensor wrappé."""
+        self.metric.G = value
 
     # ================================================================
     # Couplage phase → métrique (modulation structurelle)
@@ -317,14 +351,18 @@ class KuramotoMetricCoupler:
             )
 
         # Appliquer le gradient naturel sur SPD
-        self.G = self.nat_grad.retract(G_modulated, grad_E)
+        new_G = self.nat_grad.retract(G_modulated, grad_E)
 
         # --- Normalisation post-retraction (sécurité) ---
         # Rescaler G pour maintenir tr(G) ≈ N
-        trace_G = np.trace(self.G)
-        if abs(trace_G - self.mvt_config.ambient_dim) > 0.5 * self.mvt_config.ambient_dim:
-            self.G = self.G * (self.mvt_config.ambient_dim / trace_G)
-            self.G = 0.5 * (self.G + self.G.T)
+        trace_G = np.trace(new_G)
+        target_trace = float(self.mvt_config.ambient_dim)
+        if abs(trace_G - target_trace) > 0.5 * target_trace:
+            new_G = new_G * (target_trace / trace_G)
+            new_G = 0.5 * (new_G + new_G.T)
+
+        # --- Write back into the wrapped MetricTensor ---
+        self.metric.G = new_G
 
         # --- Métriques ---
         r = self.kuramoto.order_parameter()
@@ -536,7 +574,6 @@ class KuramotoMetricCoupler:
 
     def __repr__(self) -> str:
         sync = self.get_sync_state()
-        metric = self.get_metric_state()
         return (
             f"KuramotoMetricCoupler(\n"
             f"  N={self.kura_config.N},\n"
@@ -544,8 +581,8 @@ class KuramotoMetricCoupler:
             f"  K={sync['coupling_K']},\n"
             f"  r={sync['order_parameter']:.3f},\n"
             f"  coherence={sync['phase_coherence']:.3f},\n"
-            f"  G_spd={metric['spd']},\n"
-            f"  G_det={metric['det']:.4e},\n"
+            f"  G_spd={bool(np.all(np.linalg.eigvalsh(self.metric.G) > 0))},\n"
+            f"  G_det={np.linalg.det(self.metric.G):.4e},\n"
             f"  steps={self._step_count},\n"
             f")"
         )

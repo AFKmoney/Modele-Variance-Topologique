@@ -30,6 +30,7 @@ from .syntopy import SyntopicLayer
 from .plasticity import TopologicalPlasticityEngine
 from .projector import ManifoldProjector
 from .creativity import CreativityEngine
+from .kuramoto_metric import KuramotoMetricCoupler
 
 
 @dataclass
@@ -67,8 +68,17 @@ class MVT:
 
         self.config = config
 
+        # === COUPLAGE KURAMOTO ↔ MÉTRIQUE (mémoire morphologique) ===
+        self.kuramoto_enabled = config.kuramoto_enabled
+        if self.kuramoto_enabled:
+            # Coupler wraps MetricTensor — all downstream modules get .metric
+            self.coupler = KuramotoMetricCoupler(config)
+            self.metric = self.coupler.metric  # reference to wrapped MetricTensor
+        else:
+            self.coupler = None
+            self.metric = MetricTensor(config)
+
         # Composants de base
-        self.metric = MetricTensor(config)
         self.encoder = InputEncoder(config, self.metric)
         self.lagrangian = SemanticLagrangian(config, self.metric)
         self.integrator = LagrangianIntegrator(config, self.lagrangian)
@@ -83,6 +93,7 @@ class MVT:
         self.lagrangian.novelty_force = self.creativity.novelty_force
 
         self._generation_history: List[GenerationResult] = []
+        self._coupling_metrics: List[dict] = []
 
     def set_example(self, example_text: str):
         self.syntopy.set_example(example_text)
@@ -233,6 +244,13 @@ class MVT:
             # Enregistrer la visite
             self.creativity.record_visit(q_new)
 
+            # === KURAMOTO COUPLED STEP (mémoire morphologique) ===
+            # Si activé, le tenseur G évolue à chaque step d'intégration.
+            # G encode le rythme interne de l'espace sémantique.
+            if self.kuramoto_enabled and self.coupler is not None:
+                coupling_m = self.coupler.coupled_step(q_new, dq_new)
+                self._coupling_metrics.append(coupling_m)
+
             # Vérification de divergence (TRÈS relâchée)
             if np.linalg.norm(q_new) > self.config.divergence_threshold:
                 trajectory = trajectory[:step + 1]
@@ -326,7 +344,7 @@ class MVT:
         return [self.generate(prompt, **kwargs) for prompt in prompts]
 
     def get_stats(self) -> Dict[str, Any]:
-        return {
+        stats = {
             "config": {
                 "ambient_dim": self.config.ambient_dim,
                 "intrinsic_dim": self.config.intrinsic_dim,
@@ -334,6 +352,7 @@ class MVT:
                 "num_rk4_steps": self.config.num_rk4_steps,
                 "temperature": self.creativity.temperature,
                 "novelty_bias": self.creativity.novelty_bias,
+                "kuramoto_enabled": self.kuramoto_enabled,
             },
             "metric": {
                 "det": float(np.linalg.det(self.metric.G)),
@@ -355,9 +374,16 @@ class MVT:
                 "total_generations": len(self._generation_history),
             },
         }
+        if self.kuramoto_enabled and self.coupler is not None:
+            stats["kuramoto"] = self.coupler.get_sync_state()
+        return stats
 
     def reset(self):
-        self.metric = MetricTensor(self.config)
+        if self.kuramoto_enabled and self.coupler is not None:
+            self.coupler = KuramotoMetricCoupler(self.config)
+            self.metric = self.coupler.metric
+        else:
+            self.metric = MetricTensor(self.config)
         self.encoder = InputEncoder(self.config, self.metric)
         self.lagrangian = SemanticLagrangian(self.config, self.metric)
         self.integrator = LagrangianIntegrator(self.config, self.lagrangian)
@@ -367,6 +393,7 @@ class MVT:
         self.creativity = CreativityEngine(self.config, self.metric)
         self.lagrangian.novelty_force = self.creativity.novelty_force
         self._generation_history = []
+        self._coupling_metrics = []
 
     def __repr__(self) -> str:
         stats = self.get_stats()

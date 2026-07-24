@@ -63,5 +63,14 @@ class MVTConfig:
     max_consecutive_repeat: int = 2  # Max répétitions consécutives autorisées
     sample_rate: int = 3  # Échantillonner tous les N pas
 
+    # === KURAMOTO ↔ MÉTRIQUE COUPLÉE ===
+    kuramoto_enabled: bool = False  # Activer la boucle Kuramoto-G (mémoire morphologique)
+    kuramoto_coupling_K: float = 1.0  # Force de couplage Kuramoto
+    kuramoto_n_oscillators: Optional[int] = None  # Nombre d'oscillateurs (None = ambient_dim)
+    kuramoto_metric_lr: float = 0.001  # Taux d'apprentissage NatGrad SPD
+    kuramoto_retraction: str = "approx2"  # Méthode de retraction: 'exp', 'approx2', 'cholesky'
+    kuramoto_phase_coupling: float = 0.1  # ε dans G_ij *= (1 + ε·cos(φ_i - φ_j))
+    kuramoto_phase_init: str = "random"  # Initialisation des phases: 'random', 'sync', 'cluster'
+
     # === Reproductibilité ===
     seed: Optional[int] = 42
