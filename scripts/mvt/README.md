@@ -5,57 +5,60 @@
 <img src="https://img.shields.io/badge/PyTorch-MoE_&_EDT-red?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch"/>
 <img src="https://img.shields.io/badge/CPU-Optimized-success?style=for-the-badge" alt="CPU"/>
 <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
-<img src="https://img.shields.io/badge/Tests-39%20Passed-cyan?style=for-the-badge" alt="Tests"/>
+<img src="https://img.shields.io/badge/Tests-44%20Passed-cyan?style=for-the-badge" alt="Tests"/>
+<img src="https://img.shields.io/badge/Version-3.0-9cf?style=for-the-badge" alt="v3.0"/>
 
 <br/><br/>
 
-# MVT — Modele a Variance Topologique
+# MVT — Mod&egrave;le &agrave; Variance Topologique
 
-### L'IA ne lit plus des tokens. Elle surf sur des varietes geometriques.
-
-<br/>
-
-<code>pip install numpy torch</code>
+### AI doesn't read tokens anymore. It surfs on geometric manifolds.
 
 <br/>
 
-[Architecture](#-architecture) ·
-[Mathematiques](#-fondements-mathematiques) ·
-[Creativite](#-moteur-de-creativite) ·
-[Agent Autonome](#-agent-autonome-mvsagent) ·
-[MoE + EDT](#-moe-mvt--expert-decoupled-training) ·
-[Usage](#-usage) ·
-[Structure](#-structure)
+`pip install numpy torch`
 
 <br/>
-<br/>
+
+[Architecture](#architecture) &middot;
+[Mathematics](#mathematical-foundations) &middot;
+[Kuramoto &harr; Metric Coupling](#-kuramoto--metric-coupling--morphological-memory) &middot;
+[Creativity Engine](#creativity-engine) &middot;
+[Autonomous Agent](#autonomous-agent-mvsagent) &middot;
+[MoE + EDT](#moe-mvt--expert-decoupled-training) &middot;
+[Chinchilla Scaling](#chinchilla-scaling-for-mvt) &middot;
+[Usage](#usage) &middot;
+[Structure](#project-structure)
+
+<br/><br/>
 
 ```
-  Les Transformers :              Le MVT :
+  Transformers:                  MVT:
 
-  Token → Embed → Attention     Mot → Position dans R^N →
-    → FFN → Token → ...           Champ de force Coulomb →
-                                   Lagrangien (RK4) →
-                                   Trajectoire sur variete →
-                                   Projection continue → Texte
+  Token &rarr; Embed &rarr; Attn   Word &rarr; Position in R^N &rarr;
+    &rarr; FFN &rarr; Token          Coulomb Force Field &rarr;
+                                    Lagrangian (RK4) &rarr;
+                                    Trajectory on Manifold &rarr;
+                                    Continuous Projection &rarr; Text
 ```
 
 </div>
 
 ---
 
-## Pourquoi
+## Why
 
-Les transformers sont limits par trois hypotheses fondamentales :
-1. **Discretisation** : le langage est decoupe en tokens, un par un. Pas de continuite semantique.
-2. **Attention globale** : chaque token "regarde" tous les autres. Quadratique en sequence length.
-3. **Pas de geometrie** : l'espace latent est plat (euclidien). Pas de structure, pas de courbure.
+Transformers are constrained by three fundamental hypotheses:
 
-Le MVT rejette ces trois hypotheses.
+1. **Discretization**: language is chopped into tokens, one by one. No semantic continuity.
+2. **Global Attention**: every token "looks at" all others. Quadratic in sequence length.
+3. **Flat Geometry**: the latent space is Euclidean. No curvature, no structure.
 
-**Postulat fondamental** : le sens d'un texte est une *variete riemannienne* vivante dans R^N. La generation de langage est le mouvement d'une particule d'idee sur cette variete, soumise au lagrangien semantique.
+MVT rejects all three.
 
-Il n'y a pas de tokens. Il n'y a pas d'attention. Il y a un champ de force continu, une metrique courbee, et une trajectoire geodesique.
+**Core Postulate**: the meaning of text is a *living Riemannian manifold* in R^N. Language generation is the movement of an idea-particle on that manifold, governed by a semantic Lagrangian.
+
+There are no tokens. There is no attention. There is a continuous force field, a curved metric, and a geodesic trajectory.
 
 ---
 
@@ -63,166 +66,255 @@ Il n'y a pas de tokens. Il n'y a pas d'attention. Il y a un champ de force conti
 
 ```
                               ┌─────────────────────┐
-                              │   INPUT ENCODEUR     │
+                              │    INPUT ENCODER     │
                               │  SHA-256 + TF-IDF    │
-                              │  Mot → R^N (pos)     │
+                              │  Word &rarr; R^N (pos)│
                               └──────────┬──────────┘
                                          │
                               ┌──────────▼──────────┐
-                              │   CHAMP VECTORIEL   │
-                              │  Sources/Sinks      │
-                              │  Coulomb en N-dim   │
+                              │   VECTOR FIELD       │
+                              │  Sources / Sinks     │
+                              │  Coulomb in N-dim    │
                               └──────────┬──────────┘
                                          │
               ┌──────────────────────────┼──────────────────────────┐
               │                          │                          │
    ┌──────────▼──────────┐    ┌──────────▼──────────┐    ┌──────────▼──────────┐
-   │     SYNTOPIE ★      │    │   TENSEUR METRIQUE  │    │  LAGRANGIEN SEM.    │
-   │  Fusion topologique │    │     G_ij(t)         │    │  L = T - V           │
-   │  One-shot absolu    │    │  Christoffel Gamma  │    │  Euler-Lagrange      │
-   │  Sans gradient      │    │  Courbure scalaire R │    │  Integrateur RK4     │
+   │     SYNTOPIE ★      │    │   METRIC TENSOR     │    │  SEMANTIC LAGRANG.  │
+   │  Topological Fusion │    │     G_ij(t)         │    │  L = T - V           │
+   │  One-shot absolute   │    │  Christoffel &Gamma; │    │  Euler-Lagrange      │
+   │  Zero gradient       │    │  Scalar curvature R  │    │  RK4 Integrator      │
    └──────────┬──────────┘    └──────────┬──────────┘    └──────────┬──────────┘
               │                          │                          │
               └──────────────────────────┼──────────────────────────┘
                                          │
                               ┌──────────▼──────────┐
-                              │   CREATIVITE ENGINE  │
-                              │  Bruit + Nouveaute   │
-                              │  Sauts metaphoriques │
-                              │  Soft-max selection  │
+                              │  ★ KURAMOTO COUPLER │
+                              │  Kuramoto &harr; G(t) │
+                              │  Morphological Memory │
+                              │  NatGrad on SPD       │
                               └──────────┬──────────┘
                                          │
                               ┌──────────▼──────────┐
-                              │    PLASTICITE        │
-                              │  dG/dt = -alpha*C   │
-                              │       + beta*F       │
-                              │  Erosion/Sediment    │
+                              │   CREATIVITY ENGINE  │
+                              │  Noise + Novelty     │
+                              │  Metaphor Jumps       │
+                              │  Soft-max selection   │
                               └──────────┬──────────┘
                                          │
                               ┌──────────▼──────────┐
-                              │    PROJECTEUR        │
-                              │  R^N → Texte        │
-                              │  Plus proche voisin  │
+                              │    PLASTICITY        │
+                              │  dG/dt = &minus;&alpha;C   │
+                              │       + &beta;F        │
+                              │  Erosion / Sediment   │
+                              └──────────┬──────────┘
+                                         │
+                              ┌──────────▼──────────┐
+                              │    PROJECTOR         │
+                              │  R^N &rarr; Text      │
+                              │  Nearest neighbor     │
                               └─────────────────────┘
 ```
 
 ---
 
-## Fondements Mathematiques
+## Mathematical Foundations
 
-### Tenseur Metrique Dynamique G_ij(t)
+### Dynamic Metric Tensor G_ij(t)
 
-L'espace semantique est une variete riemannienne dont la metrique evolue dans le temps.
+The semantic space is a Riemannian manifold whose metric evolves over time. When Kuramoto coupling is enabled, G(t) is not a static parameter but **morphological memory** — a third scaling dimension beyond params and data.
 
 ```python
-# Initialisation : metrique quasi-euclidienne
-G = I_N + epsilon * perturbation_symetrique
+# Initialization: quasi-Euclidean metric
+G = I_N + epsilon * symmetric_perturbation
 
-# Met a jour avec garantie de definie positivite
+# Update with guaranteed positive-definiteness
 G += dG
-# Clamp des valeurs propres : lambda_i >= 1e-6
+# Eigenvalue clamping: lambda_i >= 1e-6
 ```
 
-**Symboles de Christoffel** (vectorise via `np.einsum`) :
+**Christoffel Symbols** (vectorized via `np.einsum`):
 
-$$\Gamma^k_{ij} = \frac{1}{2} G^{kl} \left( \frac{\partial G_{li}}{\partial q^j} + \frac{\partial G_{lj}}{\partial q^i} - \frac{\partial G_{ij}}{\partial q^l} \right)$$
+&Gamma;<sup>k</sup><sub>ij</sub> = (1/2) G<sup>kl</sup> (&part;G<sub>li</sub>/&part;q<sup>j</sup> + &part;G<sub>lj</sub>/&part;q<sup>i</sup> &minus; &part;G<sub>ij</sub>/&part;q<sup>l</sup>)
 
 ```python
 Gamma = 0.5 * np.einsum('kl,lij->kij', G_inv, dG_combined)  # (N, N, N)
 ```
 
-**Acceleration geodesique** :
+**Geodesic Acceleration**:
 
-$$\ddot{q}^k = -\Gamma^k_{ij} \, \dot{q}^i \, \dot{q}^j$$
+q&#772;<sup>k</sup> = &minus;&Gamma;<sup>k</sup><sub>ij</sub> q&#775;<sup>i</sup> q&#775;<sup>j</sup>
 
 ```python
 accel = -np.einsum('kij,i,j->k', Gamma, dq, dq)
 ```
 
-**Courbure scalaire** :
+**Scalar Curvature**:
 
-$$R \approx \frac{1}{N} \text{tr}(G^{-1} \cdot \Delta \cdot \Delta)$$
+R &asymp; (1/N) tr(G<sup>&minus;1</sup> &middot; &Delta; &middot; &Delta;)
 
-### Lagrangien Semantique
+### Semantic Lagrangian
 
-$$\mathcal{L}(q, \dot{q}, t) = T(q, \dot{q}) - V(q, t)$$
+L(q, q&#775;, t) = T(q, q&#775;) &minus; V(q, t)
 
-Ou l'energie cinetique est definie par la metrique riemannienne :
+Where kinetic energy is defined by the Riemannian metric:
 
-$$T = \frac{1}{2} \dot{q}^T \, G \, \dot{q}$$
+T = (1/2) q&#775;<sup>T</sup> G q&#775;
 
-Et le potentiel combine confinement doux + force externe semantique :
+And the potential combines soft confinement + external semantic force:
 
-$$V(q) = V_{\text{confinement}}(q) + V_{\text{semantique}}(q)$$
+V(q) = V<sub>confinement</sub>(q) + V<sub>semantic</sub>(q)
 
-Les equations d'Euler-Lagrange sont resolues numeriquement par **Runge-Kutta 4** :
+Euler-Lagrange equations are solved numerically via **Runge-Kutta 4**:
 
 ```python
 # RK4 step
-k1_q, k1_dq = derivees(q, dq, t)
-k2_q, k2_dq = derivees(q + 0.5*dt*k1_q, dq + 0.5*dt*k1_dq, t + 0.5*dt)
-k3_q, k3_dq = derivees(q + 0.5*dt*k2_q, dq + 0.5*dt*k2_dq, t + 0.5*dt)
-k4_q, k4_dq = derivees(q + dt*k3_q, dq + dt*k3_dq, t + dt)
+k1_q, k1_dq = derivatives(q, dq, t)
+k2_q, k2_dq = derivatives(q + 0.5*dt*k1_q, dq + 0.5*dt*k1_dq, t + 0.5*dt)
+k3_q, k3_dq = derivatives(q + 0.5*dt*k2_q, dq + 0.5*dt*k2_dq, t + 0.5*dt)
+k4_q, k4_dq = derivatives(q + dt*k3_q, dq + dt*k3_dq, t + dt)
 
 q_new = q + (dt/6) * (k1_q + 2*k2_q + 2*k3_q + k4_q)
 dq_new = dq + (dt/6) * (k1_dq + 2*k2_dq + 2*k3_dq + k4_dq)
 ```
 
-### Syntopie — Operateur Topologique
+### Syntopy &mdash; Topological Operator
 
-L'operateur **★** (syntopie) fusionne deux varietes semantiques sans gradient :
+The **&starf;** (syntopy) operator fuses two semantic manifolds without gradients:
 
-$$\tau = \nabla \star (M_{\text{requete}} \oplus M_{\text{exemple}})$$
+&tau; = &nabla; &starf; (M<sub>query</sub> &oplus; M<sub>example</sub>)
 
-- La topologie de l'exemple "s'imprime" instantanement sur la requete
-- **Zero gradient, zero fine-tuning** : la deformation est purement geometrique
-- Permet le one-shot absolu : un seul exemple suffit pour contraindre la generation
+- The example's topology "imprints" instantly onto the query
+- **Zero gradient, zero fine-tuning**: the deformation is purely geometric
+- Enables absolute one-shot: a single example constrains generation
 
-### Encodage — SHA-256 Deterministe
+### Encoding &mdash; Deterministic SHA-256
 
-Chaque mot est projete en position unique dans R^N via hachage :
+Each word is projected to a unique position in R^N via hashing:
 
 ```python
 h = sha256(word.encode('utf-8')).hexdigest()
 pos[i] = scale * tanh(normalize(h[start:start+4]))
 ```
 
-Proprietes :
-- **Deterministe** : meme mot = meme position, toujours
-- **Quasi-uniforme** : SHA-256 garantit une distribution homogene
-- **Illimite** : aucun vocabulaire fige, tout mot peut etre encode
-- **TF-IDF** : les mots rares ont un poids plus fort
+Properties:
+- **Deterministic**: same word = same position, always
+- **Quasi-uniform**: SHA-256 guarantees homogeneous distribution
+- **Unlimited**: no frozen vocabulary, any word can be encoded
+- **TF-IDF**: rare words carry stronger weight
 
 ---
 
-## Moteur de Creativite
+## ★ Kuramoto &harr; Metric Coupling (Morphological Memory)
 
-Le MVT n'est pas un LLM deterministe. Il possede un moteur de creativite a 5 couches :
+This is the core innovation of MVT v3. The metric tensor G(t) is no longer a static learnable parameter &mdash; it is a **living dynamical system** coupled to a bank of Kuramoto oscillators.
 
-| Couche | Mecanisme | Effet |
-|--------|-----------|-------|
-| **Temperature** | Bruit gaussien dans l'acceleration | Exploration stochastique |
-| **Novelty-seeking** | Repulsion 1/r des regions visitees | Anti-stagnation, anti-repetition |
-| **Sauts metaphoriques** | Discontinuite probabiliste (10%) | Associations inedites |
-| **Soft-max selection** | Election probabiliste des mots | Diversite lexicale |
-| **Pensée divergente** | Trajectoires paralleles | Exploration multi-chemins |
+### The Coupled System
+
+```
+    d&phi;<sub>i</sub>/dt = &omega;<sub>i</sub> + (K/N) &Sigma;<sub>j</sub> sin(&phi;<sub>j</sub> &minus; &phi;<sub>i</sub>) &middot; G<sub>ij</sub>(t)
+
+    dG/dt = NatGrad<sub>SPD</sub>( L(q, q&#775;, G, &phi;) )
+```
+
+A **closed feedback loop**:
+1. Kuramoto oscillators synchronize their phases &phi;(t), modulated by the metric G
+2. Phase coherence structurally modulates G: synchronized pairs get stronger coupling
+3. G is updated via Natural Gradient on the SPD manifold
+
+G(t) becomes **morphological memory**: each integration step reshapes the geometry of semantic space. This introduces a third scaling dimension:
+
+> **params &times; data &times; morphological_steps**
+
+### Phase &rarr; Metric Modulation
+
+G<sub>ij</sub> &larr; G<sub>ij</sub> &times; (1 + &epsilon; &middot; cos(&phi;<sub>i</sub> &minus; &phi;<sub>j</sub>))
+
+Synchronized pairs (&phi;<sub>i</sub> &asymp; &phi;<sub>j</sub>) see their coupling reinforced. Desynchronized pairs see it weakened. The metric **pulses** with the internal rhythm of the semantic space.
+
+### Natural Gradient on SPD Manifold
+
+The metric lives on S<sup>+</sup><sub>n</sub> (symmetric positive definite matrices) with the affine-invariant Riemannian metric:
+
+&langle;X, Y&rangle;<sub>G</sub> = tr(G<sup>&minus;1</sup> X G<sup>&minus;1</sup> Y)
+
+The Riemannian gradient transforms the Euclidean gradient:
+
+grad<sub>R</sub> f = G &middot; (&part;f/&part;G) &middot; G
+
+Three retraction methods (keeping G on the manifold):
+
+| Method | Formula | Cost | Stability |
+|--------|---------|------|-----------|
+| `exp` (exact) | G<sup>1/2</sup> expm(G<sup>&minus;1/2</sup> &eta; G<sup>&minus;1/2</sup>) G<sup>1/2</sup> | O(N&sup3;) | Exact |
+| `approx2` | G + &eta; + (1/2) &eta; G<sup>&minus;1</sup> &eta; | O(N&sup3;) | **Recommended for CPU** |
+| `cholesky` | L &middot; expm(L<sup>&minus;1</sup> &eta; L<sup>&minus;T</sup>) &middot; L<sup>T</sup> | O(N&sup3;) | Most stable |
+
+### Stability: Trace Normalization
+
+The critical problem with NatGrad is that `grad_R = G &middot; &nabla; &middot; G` causes quadratic amplification. MVT solves this with explicit boundedness constraints:
+
+**Loss function with regularization:**
+
+L = (T &minus; V) + &alpha; &middot; (tr(G) &minus; N)&sup2; + &gamma; &middot; &Sigma;(log &lambda;<sub>i</sub>)&sup2;
+
+- **Trace penalty**: anchors tr(G) &asymp; N, prevents explosion
+- **Log-eigenvalue penalty**: prevents collapse/explosion of individual eigenvalues
+- **Post-retraction rescaling**: if |tr(G) &minus; N| > 0.5N, rescale G *= N/tr(G)
+
+**Verified stability over 20 consecutive generations**: condition number &le; 1.07, eigenvalues in [0.97, 1.37].
 
 ```python
-# Bruit thermique
+# Enable Kuramoto coupling — replaces static MetricTensor
+config = MVTConfig(
+    kuramoto_enabled=True,
+    kuramoto_coupling_K=2.0,       # Kuramoto coupling strength
+    kuramoto_n_oscillators=128,    # Oscillator count (= ambient_dim)
+    kuramoto_metric_lr=0.001,      # NatGrad learning rate
+    kuramoto_retraction="approx2",  # Retraction method
+    kuramoto_phase_coupling=0.1,   # Phase → metric coupling (epsilon)
+)
+
+model = MVT(config)
+# model.coupler wraps model.metric — backward compatible
+# G evolves at every RK4 step via coupled_step(q, dq)
+```
+
+### Learning Verification
+
+G successfully encodes Kuramoto phase structure:
+
+```
+  Correlation(G, cos(Δφ)): 0.044 → 0.959  (100 steps)
+  Phase coherence:          0.870 → 0.982  (100 steps)
+  G remains SPD:            ✓ (all eigenvalues > 0)
+```
+
+---
+
+## Creativity Engine
+
+MVT is not a deterministic LLM. It has a 5-layer creativity engine:
+
+| Layer | Mechanism | Effect |
+|-------|-----------|--------|
+| **Temperature** | Gaussian noise in acceleration | Stochastic exploration |
+| **Novelty-seeking** | 1/r repulsion from visited regions | Anti-stagnation, anti-repetition |
+| **Metaphor Jumps** | Probabilistic discontinuity (10%) | Novel associations |
+| **Soft-max selection** | Probabilistic word election | Lexical diversity |
+| **Divergent thinking** | Parallel trajectories | Multi-path exploration |
+
+```python
+# Thermal noise
 noise = randn(N) * noise_scale * temperature * (1 + tanh(r/5))
 
-# Force de nouveaute
+# Novelty force
 force = sum(novelty_bias / (dist^2 + 0.1) * direction)
 ```
 
-**Anti-hallucination douce** : les singularites sont *detectees* (courbure > seuil) mais *jamais bloquantes*. La generation continue avec un marqueur. Seuil par defaut : 100.0 (relaxe 10-100x par rapport a un modele conservateur).
+**Soft anti-hallucination**: singularities are *detected* (curvature > threshold) but *never blocking*. Generation continues with a marker. Default threshold: 100.0 (relaxed 10-100x vs conservative models).
 
-```python
-if abs(curvature) > threshold:
-    return True, step  # Signale, mais ne bloque PAS
-```
-
-**Selection de mots** : soft-max avec penalite de diversite :
+**Word selection**: soft-max with diversity penalty:
 
 ```python
 probs = softmax(-distances / temperature)
@@ -232,46 +324,40 @@ selected = sample(candidates, probs)
 
 ---
 
-## Agent Autonome (MVSAgent)
+## Autonomous Agent (MVSAgent)
 
 ```
     ┌──────────────────────────────────────────────┐
-    │                BOUCLE AGENTIQUE               │
+    │              AGENTIC LOOP                      │
     │                                               │
     │   OBSERVE ──► PLAN ──► GENERATE ──► REFLECT  │
     │       ▲                                   │   │
     │       │         ◄── REPLAN ◄─── ◄────────┘   │
     │       │                                       │
-    │       └──── (insatisfaction) ──────────────── │
+    │       └──── (dissatisfaction) ─────────────── │
     └──────────────────────────────────────────────┘
 ```
 
-L'agent est **agentic de nature** — il ne fait pas que generer du texte, il :
+The agent is **agentic by nature** &mdash; it doesn't just generate text, it:
 
-1. **Observe** : analyse le prompt, identifie les concepts cles, mesure la complexite
-2. **Planifie** : decompose en sous-buts semantiques (Goals) dans R^N
-3. **Genere** : integre avec steering vers la cible (goal-directed)
-4. **Reflechit** : evalue satisfaction, creativite, coherence (scores 0-1)
-5. **Replanifie** : ajuste temperature, metaphor_prob, et cible si insuffisant
+1. **Observes**: analyzes the prompt, identifies key concepts, measures complexity
+2. **Plans**: decomposes into semantic sub-goals in R^N
+3. **Generates**: integrates with goal-directed steering
+4. **Reflects**: evaluates satisfaction, creativity, coherence (scores 0-1)
+5. **Replans**: adjusts temperature, metaphor_prob, and target if insufficient
 
 ```python
 agent = MVSAgent(MVTConfig(max_agent_iterations=5))
-result = agent.run("Imagine un monde ou la gravite n'existe pas", verbose=True)
-
-# L'agent :
-# - Observe la complexite du prompt
-# - Cree 1-2 sous-buts (exploration + creativite)
-# - Genere, evalue, et eventuellement replanifie
-# - Retourne le meilleur resultat apres 1-5 iterations
+result = agent.run("Imagine a world where gravity doesn't exist", verbose=True)
 ```
 
-**Memoire episodique** : chaque trace (prompt, resultat, score, temps) est stockee pour adaptation future.
+**Episodic memory**: every trace (prompt, result, score, time) is stored for future adaptation.
 
 ---
 
 ## MoE-MVT & Expert Decoupled Training
 
-### Architecture Sparse MoE
+### Sparse MoE Architecture
 
 ```
                     ┌───────────────────────┐
@@ -300,19 +386,19 @@ result = agent.run("Imagine un monde ou la gravite n'existe pas", verbose=True)
                     └───────────────────────┘
 ```
 
-Chaque expert est un "specialiste topologique" d'une region semantique. Le routeur distribue chaque token vers les `top_k` experts les plus pertinents. Seule une fraction des parametres est active par token.
+Each expert is a "topological specialist" for a semantic region. The router dispatches each token to the `top_k` most relevant experts. Only a fraction of parameters is active per token.
 
-**Weight tying** : `lm_head.weight = embed.tok_embed.weight` → reduction de parametres.
+**Weight tying**: `lm_head.weight = embed.tok_embed.weight` &rarr; parameter reduction.
 
-### EDT — Expert Decoupled Training
+### EDT &mdash; Expert Decoupled Training
 
-Le pipeline EDT entraine **chaque composant independamment**, puis les aligne brievement. Resultat : **189x acceleration** revendiquee vs training standard.
+The EDT pipeline trains **each component independently**, then briefly aligns them. Claimed result: **189x acceleration** vs standard training.
 
 ```
   PHASE 1                    PHASE 2a                    PHASE 2b
   ┌─────────────┐           ┌─────────────┐           ┌─────────────┐
   │  EXPERTS     │           │  ATTENTION   │           │  EMBEDDING  │
-  │  Independant │           │  Independant │           │  Separable   │
+  │  Independent │           │  Independent │           │  Separable   │
   │             │           │             │           │             │
   │  MSE(h_in,  │           │  MSE(h_in +  │           │  Next-token  │
   │   h_target) │           │   attn,      │           │  prediction │
@@ -327,26 +413,62 @@ Le pipeline EDT entraine **chaque composant independamment**, puis les aligne br
               │  PHASE 3        │◄───────────────────────────┘
               │  JOINT FINE-TUNE│
               │                 │
-              │  Tous degelés   │
+              │  All unfrozen   │
               │  PGSG rotation  │
               │  CE + aux_loss │
               │  500K tokens   │
               └─────────────────┘
 ```
 
-### PGSG — Partial Gradient Sequential Update
+### PGSG &mdash; Partial Gradient Sequential Update
 
-Seules `n_active_layers` couches sur `n_layers` total recoivent des gradients par step. Rotation circulaire : les couches ignorees a ce step le seront aux prochains.
+Only `n_active_layers` out of `n_layers` total receive gradients per step. Circular rotation: layers skipped this step will be active next.
 
 ```python
-# Step 0 : layers 0,1 actives (sur 4)
-# Step 1 : layers 1,2 actives
-# Step 2 : layers 2,3 actives
-# Step 3 : layers 3,0 actives
-# Step 4 : layers 0,1 actives (cycle)
+# Step 0: layers 0,1 active (out of 4)
+# Step 1: layers 1,2 active
+# Step 2: layers 2,3 active
+# Step 3: layers 3,0 active
+# Step 4: layers 0,1 active (cycle)
 ```
 
-**Resultat** : ~60% reduction du backprop, ideal pour CPU.
+**Result**: ~60% backprop reduction, ideal for CPU.
+
+---
+
+## Chinchilla Scaling for MVT
+
+MVT is not a transformer &mdash; standard Chinchilla scaling (20 tokens/param) does not apply. The MVT Chinchilla benchmark derives the true scaling law for differential geometry architectures.
+
+### Key Differences
+
+| Property | Transformer | MVT |
+|----------|-------------|-----|
+| Compute per step | O(N) attention | O(N&sup4;) Christoffel symbols |
+| Data unit | Discrete tokens | Continuous trajectory steps |
+| Metric | Static (learned) | Dynamic (morphological memory) |
+| Scaling dims | params &times; data | params &times; data &times; morphological_steps |
+
+### Empirical Results (CPU benchmark)
+
+| N (ambient_dim) | Step time | Christoffel time | Practical max N |
+|----------------|-----------|-----------------|-----------------|
+| 32 | ~3ms | ~0.4ms | 256 |
+| 64 | ~35ms | ~5ms | 128 |
+| 128 | ~597ms | ~98ms | 64 |
+| 256 | ~10,000ms+ | ~1,600ms | 32 |
+
+**Scaling law**: optimal D/N &asymp; 3&ndash;7 samples per parameter (vs 20 tokens/param for transformers). The O(N&sup4;) Christoffel bottleneck is the dominant cost.
+
+```bash
+cd scripts && python -m mvt.chinchilla_benchmark
+```
+
+### Practical CPU Guidelines
+
+- **Recommended `d_model`**: &le; 128 for real-time interaction on CPU
+- **RK4 steps**: 30&ndash;200 (reduce for larger N)
+- **Chinchilla ratio**: D/N &asymp; 3&ndash;7 (continuous trajectory samples per parameter)
 
 ---
 
@@ -358,67 +480,105 @@ Seules `n_active_layers` couches sur `n_layers` total recoivent des gradients pa
 pip install numpy torch
 ```
 
-### Generation Creative
+### Creative Generation (Kuramoto Coupled)
 
 ```python
 from mvt import MVTConfig, MVT
 
 config = MVTConfig(
-    ambient_dim=16,       # Dimension de l'espace semantique
-    temperature=0.8,      # 0 = deterministe, 1 = tres creatif
-    novelty_bias=0.4,     # Force de recherche de nouveaute
-    metaphor_jump_prob=0.1,  # 10% de chance de saut metaphorique par step
+    ambient_dim=64,
+    temperature=0.8,
+    novelty_bias=0.4,
+    metaphor_jump_prob=0.1,
+    kuramoto_enabled=True,           # Enable morphological memory
+    kuramoto_coupling_K=2.0,        # Kuramoto coupling strength
+    kuramoto_metric_lr=0.001,      # NatGrad learning rate
+    kuramoto_phase_coupling=0.1,    # Phase → metric coupling
 )
 
 model = MVT(config)
 result = model.generate("consciousness emerges from", temperature=0.9)
 
-print(result.text)                          # Texte genere
+print(result.text)
 print(f"Creativity : {result.creativity_score:.2f}")
 print(f"Diversity  : {result.diversity_score:.2f}")
-print(f"Time       : {result.generation_time:.4f}s")
-print(f"Singularity: {result.has_singularity}")
+print(f"Metric det : {result.metrics['metric_det']:.4f}")
+print(f"Metric cond: {result.metrics['metric_condition']:.2f}")
 
-# Ajuster la temperature a la volee
-model.set_temperature(1.2)  # Plus chaud
-model.set_temperature(0.3)  # Plus froid
+# Live Kuramoto sync state
+stats = model.get_stats()
+print(f"Kuramoto r : {stats['kuramoto']['order_parameter']:.4f}")
+print(f"Coherence  : {stats['kuramoto']['phase_coherence']:.4f}")
 ```
 
-### Agent Autonome
+### Static Mode (backward compatible)
+
+```python
+# kuramoto_enabled=False (default) — uses static MetricTensor
+config = MVTConfig(
+    ambient_dim=64,
+    temperature=0.8,
+    kuramoto_enabled=False,  # Static G, no Kuramoto
+)
+model = MVT(config)
+result = model.generate("The universe expands", temperature=0.8)
+```
+
+### Autonomous Agent
 
 ```python
 from mvt import MVTConfig, MVSAgent
 
 config = MVTConfig(
-    ambient_dim=16,
-    max_agent_iterations=5,          # Max boucles agentiques
-    self_reflection_threshold=0.5,   # Seuil de satisfaction
-    goal_steering_strength=0.3,     # Force d'attraction vers le but
+    ambient_dim=64,
+    max_agent_iterations=5,
+    self_reflection_threshold=0.5,
+    goal_steering_strength=0.3,
+    kuramoto_enabled=True,
 )
 
 agent = MVSAgent(config)
-result = agent.run("Imagine un monde ou la gravite n'existe pas", verbose=True)
-
-# L'agent observe, planifie, genere, reflechit, replanifie si besoin
-# Retourne le meilleur resultat
+result = agent.run("Imagine a world where gravity doesn't exist", verbose=True)
 ```
 
-### One-Shot Learning (Syntopie)
+### One-Shot Learning (Syntopy)
 
 ```python
 from mvt import MVTConfig, MVT
 
-model = MVT(MVTConfig(ambient_dim=16))
+model = MVT(MVTConfig(ambient_dim=64, kuramoto_enabled=True))
 
-# Apprendre un style en UN seul exemple — zero gradient
-model.set_example("Le chat dort sur le canape. Le chien court dans le jardin.")
+# Learn a style from ONE example — zero gradient
+model.set_example("The cat sleeps on the couch. The dog runs in the garden.")
 
-# La topologie de l'exemple contraint la generation
-result = model.generate("Le poisson nage dans", temperature=0.8)
+# The example's topology constrains generation
+result = model.generate("The fish swims in", temperature=0.8)
 print(result.text)
-print(f"Syntopie score: {result.syntopy_score:.2f}")
+print(f"Syntopy score: {result.syntopy_score:.2f}")
 
 model.clear_example()
+```
+
+### Natural Gradient on SPD (standalone)
+
+```python
+from mvt import NaturalGradientSPD
+import numpy as np
+
+N = 64
+G = np.eye(N) + 0.1 * np.random.randn(N, N)
+G = 0.5 * (G + G.T)
+
+ng = NaturalGradientSPD(lr=0.01, retraction_order="approx2")
+
+for step in range(100):
+    grad_E = 0.01 * np.random.randn(N, N)  # Some loss gradient
+    grad_E = 0.5 * (grad_E + grad_E.T)
+    G = ng.retract(G, grad_E)
+    # G stays on S^+_n by construction — no projection needed
+
+# Geodesic distance
+d = ng.geodesic_distance(G, np.eye(N))
 ```
 
 ### MoE-MVT + EDT (PyTorch, CPU)
@@ -426,87 +586,61 @@ model.clear_example()
 ```python
 from mvt.edt import MoEMVT, MoEMVTConfig, EDTConfig, run_edt, generate_synthetic_corpus
 
-# Configuration du modele
 model_cfg = MoEMVTConfig(
-    vocab_size=4000,     # Taille vocabulaire
-    d_model=128,         # Dimension du modele
-    n_layers=4,          # Nombre de blocs transformer
-    n_experts=8,         # Experts par couche MoE
-    top_k=2,             # Experts actives par token
-    d_ff=256,            # Dimension intermediaire
-    max_seq_len=64,      # Longueur max sequence
+    vocab_size=4000, d_model=128, n_layers=4,
+    n_experts=8, top_k=2, d_ff=256, max_seq_len=64,
 )
 
-# Configuration EDT (optimisee CPU)
 edt_cfg = EDTConfig(
-    phase1_steps_per_expert=50,     # Steps par expert (Phase 1)
-    phase1_hidden_samples=500,      # Etats caches pour pre-entrainement
-    phase2a_steps_per_layer=100,    # Steps par couche attention (Phase 2a)
-    phase2b_n_tokens=100_000,       # Tokens pour embedding (Phase 2b)
-    phase3_n_tokens=50_000,         # Tokens pour joint (Phase 3)
-    phase3_n_active_layers=2,       # PGSG : 2 couches actives / 4
+    phase1_steps_per_expert=50,
+    phase2a_steps_per_layer=100,
+    phase2b_n_tokens=100_000,
+    phase3_n_tokens=50_000,
+    phase3_n_active_layers=2,
     save_dir="./checkpoints",
 )
 
-# Entrainement
 model = MoEMVT(model_cfg)
 corpus = generate_synthetic_corpus(vocab_size=4000, length=50_000)
 stats = run_edt(model, corpus, edt_cfg, verbose=True)
-
-total, active = model.count_params()
-print(f"Params: {total:,} total, {active:,} actifs/token")
-print(f"Sparsite: {1 - active/total:.1%}")
 ```
 
-### Plasticite Topologique
+### Chinchilla Benchmark
 
-```python
-from mvt import MVTConfig, MVT
-
-model = MVT(MVTConfig(ambient_dim=16))
-
-# Generer plusieurs fois — la metrique evolue
-for prompt in ["La musique est un langage", "Les couleurs dansent"]:
-    result = model.generate(prompt)
-    stats = result.plasticity_stats
-    print(f"Barrieres: {stats['total_barriers']}, Canaux: {stats['total_channels']}")
-    print(f"det(G): {stats['metric_det']:.4f}")
-
-# La metrique s'est auto-modifiee :
-# - Erosion la ou les trajectoires ont echoue
-# - Sedimentation la ou elles ont reussi
+```bash
+cd scripts && python -m mvt.chinchilla_benchmark
 ```
 
 ---
 
-## Configuration Complete
+## Full Configuration
 
 ```python
 @dataclass
 class MVTConfig:
-    # === Espace ===
-    ambient_dim: int = 128          # Dimension de R^N
-    intrinsic_dim: int = 64         # Dimension intrinseque
+    # === Space ===
+    ambient_dim: int = 128           # Dimension of R^N
+    intrinsic_dim: int = 64         # Intrinsic dimension
 
     # === Integration ===
-    dt: float = 0.01                 # Pas de temps RK4
-    num_rk4_steps: int = 200         # Nombre de pas
+    dt: float = 0.01                # RK4 time step
+    num_rk4_steps: int = 200        # Number of integration steps
 
-    # === Plasticite ===
-    alpha_erosion: float = 0.05       # Taux d'erosion
-    beta_sedimentation: float = 0.03  # Taux de sedimentation
+    # === Plasticity ===
+    alpha_erosion: float = 0.05     # Erosion rate
+    beta_sedimentation: float = 0.03 # Sedimentation rate
 
-    # === Lagrangien ===
-    damping: float = 0.05            # Amortissement (bas = creatif)
-    potential_stiffness: float = 2.0  # Raideur du confinement
+    # === Lagrangian ===
+    damping: float = 0.05           # Damping (low = creative)
+    potential_stiffness: float = 2.0 # Confinement stiffness
 
-    # === Creativite ===
-    temperature: float = 0.8          # Bruit stochastique
-    novelty_bias: float = 0.4         # Biais vers le neuf
-    metaphor_jump_prob: float = 0.1   # Sauts metaphoriques
+    # === Creativity ===
+    temperature: float = 0.8        # Stochastic noise
+    novelty_bias: float = 0.4       # Novelty-seeking strength
+    metaphor_jump_prob: float = 0.1 # Metaphor jump probability
 
     # === Agent ===
-    max_agent_iterations: int = 5     # Max boucles
+    max_agent_iterations: int = 5
     self_reflection_threshold: float = 0.5
     goal_steering_strength: float = 0.3
 
@@ -515,7 +649,16 @@ class MVTConfig:
     diversity_penalty: float = 0.3
     max_consecutive_repeat: int = 2
 
-    # === Stabilite (relache pour creativite) ===
+    # === Kuramoto <-> Metric Coupling ===
+    kuramoto_enabled: bool = False          # Enable morphological memory
+    kuramoto_coupling_K: float = 1.0         # Kuramoto coupling strength
+    kuramoto_n_oscillators: int = None      # Oscillator count (None = ambient_dim)
+    kuramoto_metric_lr: float = 0.001       # NatGrad learning rate
+    kuramoto_retraction: str = "approx2"    # 'exp', 'approx2', 'cholesky'
+    kuramoto_phase_coupling: float = 0.1    # Phase → metric coupling (epsilon)
+    kuramoto_phase_init: str = "random"     # 'random', 'sync', 'cluster'
+
+    # === Stability (relaxed for creativity) ===
     curvature_threshold: float = 100.0
     divergence_threshold: float = 1e8
 ```
@@ -525,22 +668,29 @@ class MVTConfig:
 ## Tests
 
 ```bash
-cd scripts && python -m pytest mvt/tests.py -v
+cd scripts && python -m mvt.tests.py -v          # 39 unit tests
+cd scripts && python -m mvt.test_toy_training     # 5 integration tests (Kuramoto)
 ```
 
-39 tests couvrant tous les composants — passent en **0.58s**.
+All tests pass. Integration tests verify:
+- MVT + KuramotoMetricCoupler end-to-end generation
+- Static vs Kuramoto mode comparison
+- Stability over 20 consecutive generations (G stays SPD, cond &le; 1.07)
+- Standalone coupler integration
+- Reset and stats
 
 ```
-core/test_metric_tensor .......... OK  (Christoffel, geodesique, courbure)
-core/test_vector_field ........... OK  (Coulomb, potentiel, divergence)
+core/test_metric_tensor .......... OK  (Christoffel, geodesic, curvature)
+core/test_vector_field ........... OK  (Coulomb, potential, divergence)
 lagrangian/test_semantic_lag ..... OK  (T, V, Euler-Lagrange)
 lagrangian/test_integrator ........ OK  (RK4, action, divergence)
 test_encoder .................... OK  (SHA-256, TF-IDF, similarity)
-test_syntopy .................... OK  (fusion, syntopie score)
+test_syntopy .................... OK  (fusion, syntopy score)
 test_plasticity ................. OK  (erosion, sedimentation)
-test_creativity ................. OK  (bruit, nouveaute, sauts, soft-max)
-test_model ...................... OK  (generation, singularites)
-test_agent ...................... OK  (boucle, reflexion, replan)
+test_creativity ................. OK  (noise, novelty, jumps, soft-max)
+test_model ...................... OK  (generation, singularities)
+test_agent ...................... OK  (loop, reflection, replan)
+test_toy_training ............... OK  (5 integration tests w/ Kuramoto)
 ```
 
 ---
@@ -551,12 +701,12 @@ test_agent ...................... OK  (boucle, reflexion, replan)
 cd scripts && python -m mvt.demo
 ```
 
-5 demos interactives :
-1. **Generation creative** — Temperature, diversite, sauts metaphoriques
-2. **Agent autonome** — Boucle observe/plan/generate/reflect
-3. **One-shot syntopie** — Apprendre un style en un exemple
-4. **Plasticite** — Auto-evolution de la metrique
-5. **Agent creatif** — Tache complexe avec replanification
+5 interactive demos:
+1. **Creative generation** &mdash; Temperature, diversity, metaphor jumps
+2. **Autonomous agent** &mdash; Observe/plan/generate/reflect loop
+3. **One-shot syntopy** &mdash; Learn a style from one example
+4. **Plasticity** &mdash; Self-evolution of the metric
+5. **Creative agent** &mdash; Complex task with replanning
 
 ---
 
@@ -566,61 +716,70 @@ cd scripts && python -m mvt.demo
 cd scripts && python -m mvt.edt.run_edt
 ```
 
-Pipeline complet Phase 1 → 2a → 2b → 3 avec checkpoints intermediaires.
+Full Phase 1 &rarr; 2a &rarr; 2b &rarr; 3 pipeline with intermediate checkpoints.
 
 ---
 
-## Structure
+## Project Structure
 
 ```
 mvt/
-├── __init__.py                  # MVTConfig, MVT, MVSAgent, CreativityEngine
-├── config.py                    # 25+ hyperparametres
-├── model.py                     # Orchestrateur principal v2
-├── encoder.py                   # SHA-256 + TF-IDF → R^N
-├── syntopy.py                   # Operateur ★ de fusion topologique
-├── plasticity.py                # dG/dt = -alpha*C + beta*F
-├── projector.py                 # R^N → Texte (plus proche voisin)
-├── creativity.py                # Bruit, nouveaute, sauts, soft-max
-├── agent.py                     # Observe→Plan→Generate→Reflect→Replan
-├── demo.py                      # 5 demos interactives
-├── tests.py                     # 39 tests unitaires
+├── __init__.py                       # MVTConfig, MVT, MVSAgent, CreativityEngine
+│                                     # KuramotoMetricCoupler, NaturalGradientSPD
+├── config.py                         # 30+ hyperparameters
+├── model.py                          # Main orchestrator v3 (Kuramoto-coupled)
+├── encoder.py                        # SHA-256 + TF-IDF → R^N
+├── syntopy.py                        # ★ Topological fusion operator
+├── plasticity.py                     # dG/dt = -alpha*C + beta*F
+├── projector.py                      # R^N → Text (nearest neighbor)
+├── creativity.py                     # Noise, novelty, jumps, soft-max
+├── agent.py                          # Observe→Plan→Generate→Reflect→Replan
+├── kuramoto_metric.py               # ★ Kuramoto ↔ G(t) coupled system
+├── natural_gradient_spd.py          # ★ NatGrad on SPD manifold (3 retractions)
+├── chinchilla_benchmark.py           # ★ MVT scaling law benchmark
+├── test_toy_training.py             # ★ 5 integration tests
+├── demo.py                           # 5 interactive demos
+├── tests.py                          # 39 unit tests
 │
 ├── core/
-│   ├── metric_tensor.py         # G_ij(t), Christoffel, courbure (einsum)
-│   └── vector_field.py          # Coulomb N-dim, potentiel, divergence
+│   ├── metric_tensor.py              # G_ij(t), Christoffel, curvature (einsum)
+│   └── vector_field.py               # Coulomb N-dim, potential, divergence
 │
 ├── lagrangian/
-│   ├── semantic_lagrangian.py   # L = T - V, Euler-Lagrange
-│   └── integrator.py            # RK4, action, trajectoire optimale
+│   ├── semantic_lagrangian.py        # L = T - V, Euler-Lagrange
+│   └── integrator.py                 # RK4, action, optimal trajectory
 │
 └── edt/
-    ├── moe_model.py             # MoE-MVT : Router + Experts + Attention
-    ├── edt_pipeline.py           # 4 phases + PGSG
-    └── run_edt.py                # Script d'entrainement CPU
+    ├── moe_model.py                  # MoE-MVT: Router + Experts + Attention
+    ├── edt_pipeline.py                # 4 phases + PGSG
+    └── run_edt.py                     # CPU training script
 ```
 
 ---
 
 ## Performance
 
-| Operation | Complexite | Implementation |
+| Operation | Complexity | Implementation |
 |-----------|-----------|----------------|
-| Christoffel Symbols | O(N^3) | `np.einsum('kl,lij->kij')` — vectorise |
-| RK4 Step | O(N^2) | 4 evaluations + combinaison |
-| Distance geodesique | O(N^2) | `sqrt(delta^T G delta)` |
-| MoE Forward | O(k * d^2 * f) | k experts actifs sur n total |
-| EDT Phase 1 | O(E * S * d^2) | E experts, S steps, parallele |
-| PGSG | -60% backprop | Rotation circulaire des couches |
+| Christoffel Symbols | O(N&sup3;) | `np.einsum('kl,lij->kij')` &mdash; vectorized |
+| RK4 Step | O(N&sup2;) | 4 evaluations + combination |
+| Geodesic Distance | O(N&sup2;) | `sqrt(delta^T G delta)` |
+| Kuramoto Step | O(N&sup2;) | Coupling weighted by G |
+| NatGrad Retraction | O(N&sup3;) | `approx2`: G + &eta; + &frac12;&eta;G<sup>&minus;1</sup>&eta; |
+| MoE Forward | O(k d&sup2; f) | k active experts out of n total |
+| EDT Phase 1 | O(E S d&sup2;) | E experts, S steps, parallelizable |
+| PGSG | &minus;60% backprop | Circular layer rotation |
 
-**Optimisation CPU** : Christoffel vectorises via einsum (73s → 1.1s pour N=128), PGSG reduit le gradient computation, embedding separable pour Phase 2b.
+**CPU Optimization**: Christoffel vectorized via einsum (73s &rarr; 1.1s for N=128), PGSG reduces gradient computation, separable embedding for Phase 2b, `approx2` retraction avoids expensive matrix exponential.
+
+**Kuramoto overhead**: ~24% per generation step (measured on N=32, 50 RK4 steps).
 
 ---
 
-## Auteur
+## Author
 
 **[AFKmoney](https://github.com/AFKmoney)**
 
-## Licence
+## License
 
 MIT
