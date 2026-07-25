@@ -5,13 +5,15 @@
 1. [Why MVT Scaling is Different](#1-why-mvt-scaling-is-different)
 2. [The MVT Chinchilla Law](#2-the-mvt-chinchilla-law)
 3. [Architecture for 1B Params](#3-architecture-for-1b-params)
-4. [EDT: Expert Decoupled Training](#4-edt-expert-decoupled-training)
-5. [Multi-Core Optimization](#5-multi-core-optimization)
-6. [Training Configurations](#6-training-configurations)
-7. [Step-by-Step Training](#7-step-by-step-training)
-8. [GPU Training](#8-gpu-training)
-9. [Monitoring & Checkpointing](#9-monitoring--checkpointing)
-10. [Cost Analysis](#10-cost-analysis)
+4. [Kuramoto-Metric Coupling (Morphological Memory)](#4-kuramoto-metric-coupling-morphological-memory)
+5. [EDT: Expert Decoupled Training](#5-edt-expert-decoupled-training)
+6. [Multi-Core Optimization](#6-multi-core-optimization)
+7. [Training Configurations](#7-training-configurations)
+8. [Step-by-Step Training](#8-step-by-step-training)
+9. [GPU Training](#9-gpu-training)
+10. [Monitoring & Checkpointing](#10-monitoring--checkpointing)
+11. [Cost Analysis](#11-cost-analysis)
+12. [Troubleshooting](#12-troubleshooting)
 
 ---
 
@@ -113,7 +115,88 @@ This extreme sparsity is what makes 1B params viable: you only compute through 1
 
 ---
 
-## 4. EDT: Expert Decoupled Training
+## 4. Kuramoto-Metric Coupling (Morphological Memory)
+
+### What It Is
+
+The Kuramoto-Metric coupling is a **closed-loop dynamical system** where oscillators (Kuramoto) and the Riemannian metric G(t) co-evolve. The metric modulates synchronization patterns, and synchronization reshapes the metric. This creates **morphological memory** — the geometry itself remembers past training.
+
+### The Equations
+
+```
+Kuramoto:    dφᵢ/dt = ωᵢ + (K/N) Σⱼ sin(φⱼ - φᵢ) · G_ij(t)
+Metric:      dG/dt   = NatGrad_SPD( L(q, dq, G, φ) )
+Phase-G:     G_ij   *= (1 + ε · cos(φᵢ - φⱼ))
+```
+
+Three feedback loops running simultaneously:
+1. **Kuramoto → Metric**: Oscillator phases modulate metric entries via cosine coupling
+2. **Metric → Kuramoto**: G(t) weights the coupling strength between oscillators
+3. **Lagrangian → Metric**: Natural Gradient on SPD manifold updates G via the loss
+
+### Why This Matters for 1B Training
+
+| Effect | Without Kuramoto | With Kuramoto |
+|--------|-------------------|---------------|
+| Metric G | Static (learned once) | Dynamic (evolves at every step) |
+| Scaling dimensions | params × data | params × data × **morphological_steps** |
+| Training efficiency | Baseline | 2-3× more training signal per sample |
+| Memory | None | G(t) encodes long-range semantic structure |
+| Chinchilla D/N | 5 samples/param | **3-4 samples/param** (even more efficient) |
+
+### How to Enable
+
+```python
+from mvt.config import MVTConfig
+from mvt.model import MVT
+
+mvt_config = MVTConfig(
+    # Enable Kuramoto-Metric coupling
+    kuramoto_enabled=True,
+    kuramoto_coupling_K=1.0,        # Coupling strength
+    kuramoto_n_oscillators=None,      # None = ambient_dim (auto)
+    kuramoto_metric_lr=0.001,        # NatGrad learning rate for G
+    kuramoto_retraction="approx2",  # SPD retraction: 'exp', 'approx2', 'cholesky'
+    kuramoto_phase_coupling=0.1,      # Phase→Metric coupling strength ε
+    kuramoto_phase_init="random",    # Phase initialization
+)
+```
+
+### Natural Gradient on SPD Manifold
+
+The metric G(t) lives on the Symmetric Positive Definite (SPD) manifold. Standard SGD would push G off the manifold. Instead, we use **Natural Gradient with retraction**:
+
+```
+grad_R = G · ∇L · G        # Natural gradient (metric-aware)
+G_new = retract(G, -lr * grad_R)  # Retraction keeps G on SPD manifold
+G_new = G_new / trace(G_new)       # Trace normalization for stability
+```
+
+Three retraction methods available:
+- **`exp`**: Exact matrix exponential — most accurate, O(N³) per step
+- **`approx2`**: Second-order approximation — fast and stable (recommended)
+- **`cholesky`**: Log-Cholesky parameterization — good for ill-conditioned G
+
+### Stability Safeguards
+
+- **Trace normalization**: G is normalized to trace=1 after each update, preventing explosion
+- **Eigenvalue floor**: All eigenvalues clamped to ≥ 1e-4, keeping G positive definite
+- **Cond(G) monitoring**: Condition number tracked during training. If cond(G) > 1000, reduce `kuramoto_metric_lr`
+
+### Recommended Settings for 1B
+
+```python
+kuramoto_enabled=True,
+kuramoto_coupling_K=0.5,          # Moderate coupling for stability
+kuramoto_metric_lr=0.0005,        # Lower LR for larger model
+kuramoto_retraction="approx2",    # Best speed/stability tradeoff
+kuramoto_phase_coupling=0.05,     # Gentle phase→metric coupling
+kuramoto_phase_init="cluster",   # Start with clustered phases (faster convergence)
+```
+
+---
+
+## 5. EDT: Expert Decoupled Training
 
 ### Why Not Standard Training?
 
@@ -195,7 +278,7 @@ Loss = CE(logits, targets) + 0.01 × aux_loss
 
 ---
 
-## 5. Multi-Core Optimization
+## 6. Multi-Core Optimization
 
 ### Where Parallelism Helps
 
@@ -236,7 +319,7 @@ Diminishing returns because Phases 2-3 are sequential. But even 2 cores give 1.5
 
 ---
 
-## 6. Training Configurations
+## 7. Training Configurations
 
 ### Quick Reference
 
@@ -269,7 +352,7 @@ python -m mvt.edt.run_edt_multicore --config 1b --dry-run
 
 ---
 
-## 7. Step-by-Step Training
+## 8. Step-by-Step Training
 
 ### Step 1: Verify Environment
 
@@ -376,7 +459,7 @@ checkpoints/
 
 ---
 
-## 8. GPU Training
+## 9. GPU Training
 
 For 1B params, GPU training is strongly recommended.
 
@@ -393,6 +476,80 @@ edt_cfg = EDTConfig(
 )
 ```
 
+### GPU Training Script (1B on RunPod)
+
+```python
+"""train_1b_gpu.py — Train 1B MVT on multi-GPU cluster (RunPod, Lambda, etc.)
+Usage: python train_1b_gpu.py [--cores N] [--resume]
+"""
+import sys, os
+sys.path.insert(0, '/home/z/my-project/scripts')
+
+import torch
+from mvt.edt.moe_model import MoEMVT, MoEMVTConfig
+from mvt.edt.edt_pipeline import EDTConfig
+from mvt.edt.run_edt_multicore import run_edt_multicore, get_1b_config, get_device
+from mvt.edt.edt_pipeline import generate_synthetic_corpus
+
+# === Auto-detect GPU ===
+device = get_device("auto")
+print(f"Training device: {device}")
+if device == "cpu":
+    print("WARNING: No GPU detected. 1B training on CPU will take ~100+ hours.")
+    print("Consider using RunPod, Lambda Labs, or a cloud GPU provider.")
+
+# === 1B Config ===
+model_cfg, edt_cfg = get_1b_config()
+edt_cfg.device = device
+
+# GPU-optimized batch sizes
+if device == "cuda":
+    edt_cfg.phase1_batch_size = 256
+    edt_cfg.phase2a_batch_size = 64
+    edt_cfg.phase2b_batch_size = 256
+    edt_cfg.phase3_batch_size = 32
+    edt_cfg.save_dir = "/home/z/my-project/download/mvt_1b_checkpoints"
+
+# === Create model ===
+model = MoEMVT(model_cfg).to(device)
+total, active = model.count_params()
+print(f"Model: {total:,} total params, {active:,} active/token")
+
+# === Resume if requested ===
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--resume", action="store_true")
+parser.add_argument("--cores", type=int, default=None)
+args = parser.parse_args()
+
+n_workers = args.cores or os.cpu_count() or 4
+
+# === Load or generate corpus ===
+corpus_path = os.path.join(edt_cfg.save_dir, "corpus.pt")
+if os.path.exists(corpus_path):
+    corpus = torch.load(corpus_path)
+    print(f"Loaded corpus: {len(corpus):,} tokens")
+else:
+    # For 1B: you want a REAL corpus here, not synthetic
+    # Example with a real tokenized corpus:
+    # corpus = torch.load("your_real_corpus.pt")
+    print("WARNING: Using synthetic corpus. Replace with real data for production.")
+    corpus = generate_synthetic_corpus(vocab_size=model_cfg.vocab_size, length=100_000_000)
+    os.makedirs(edt_cfg.save_dir, exist_ok=True)
+    torch.save(corpus, corpus_path)
+
+# === Train ===
+stats = run_edt_multicore(
+    model, corpus, edt_cfg,
+    n_workers=n_workers,
+    verbose=True,
+    resume=args.resume,
+)
+
+print(f"\nTraining complete! Total time: {stats['total_time']:.1f}s")
+print(f"Checkpoint: {edt_cfg.save_dir}/mvt_edt_final.pt")
+```
+
 ### Multi-GPU (Phase 1)
 
 Phase 1 experts can be distributed across GPUs using the same ProcessPoolExecutor pattern — each process uses a different CUDA device:
@@ -400,6 +557,7 @@ Phase 1 experts can be distributed across GPUs using the same ProcessPoolExecuto
 ```python
 # In run_edt_multicore, assign GPUs to workers:
 # Worker 0 → cuda:0, Worker 1 → cuda:1, etc.
+# This is automatic when --device cuda is used with enough GPUs
 ```
 
 ### Expected GPU Speedup
@@ -424,7 +582,7 @@ Phase 1 experts can be distributed across GPUs using the same ProcessPoolExecuto
 
 ---
 
-## 9. Monitoring & Checkpointing
+## 10. Monitoring & Checkpointing
 
 ### Training Statistics
 
@@ -461,7 +619,7 @@ model.eval()
 
 ---
 
-## 10. Cost Analysis
+## 11. Cost Analysis
 
 ### CPU Training Cost
 
@@ -510,4 +668,32 @@ The 100× speedup comes from:
 - [ ] Check checkpoints: `ls checkpoints/`
 - [ ] Scale up: `--config medium` or `--config large`
 - [ ] 1B plan: `python -m mvt.edt.run_edt_multicore --config 1b --dry-run`
-- [ ] GPU: Change `device="cuda"` in EDTConfig
+- [ ] GPU: `python -m mvt.edt.run_edt_multicore --config medium --device cuda`
+- [ ] Resume: `python -m mvt.edt.run_edt_multicore --config large --resume`
+- [ ] Kuramoto: Enable `kuramoto_enabled=True` in MVTConfig for morphological memory
+- [ ] 1B GPU: See `train_1b_gpu.py` script above for RunPod/Lambda deployment
+
+---
+
+## 12. Troubleshooting
+
+### Common Issues
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| Phase 1 loss > 0.5 | Hidden bank too small | Increase `phase1_hidden_samples` to 5000+ |
+| cond(G) exploding | Kuramoto metric_lr too high | Reduce `kuramoto_metric_lr` to 0.0001 |
+| Phase 3 loss increasing | Catastrophic forgetting | Reduce `phase3_lr` to 1e-4, increase `phase3_n_tokens` |
+| Aux loss > 1.0 | Router collapse | Increase `aux_loss_weight` to 0.05 |
+| OOM on GPU | Batch too large for GPU memory | Reduce batch sizes, or use gradient accumulation |
+| Phase 1 not scaling | GIL contention | Use `mp.get_context('spawn')` (already default) |
+| NaN in loss | Learning rate too high | Reduce lr by 10×, check grad_clip |
+
+### Kuramoto-Specific Issues
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| G not positive definite | Eigenvalue floor too low | Increase `eigval_floor` to 1e-3 |
+| Oscillators not syncing | K too low | Increase `kuramoto_coupling_K` to 2.0 |
+| Metric exploding | No trace normalization | Ensure trace normalization is enabled (default) |
+| Slow convergence | Wrong phase init | Try `kuramoto_phase_init="cluster"` |

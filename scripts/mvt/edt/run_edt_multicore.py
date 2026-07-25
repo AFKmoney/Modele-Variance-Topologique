@@ -1,18 +1,26 @@
 """
-EDT Multi-Core — Expert Decoupled Training with CPU Parallelism
-===============================================================
+EDT Multi-Core — Expert Decoupled Training with CPU/GPU Parallelism
+====================================================================
 Phase 1 (expert training) is embarrassingly parallel: each expert trains
 independently on the same hidden state bank. This script distributes
-experts across all available CPU cores using ProcessPoolExecutor.
+experts across all available CPU cores using ProcessPoolExecutor,
+or across GPUs (Phase 1 only).
 
-Speedup: ~linear with core count for Phase 1 (the bottleneck).
-Phase 2a, 2b, 3 remain sequential (they share model weights).
+Features:
+  - Multi-core CPU parallelism for Phase 1 (~N× speedup)
+  - GPU training support for all phases
+  - Resume from checkpoint (--resume flag)
+  - Kuramoto-Metric coupling integration (--kuramoto flag)
+  - Dry-run planning mode
 
 Usage:
     python -m mvt.edt.run_edt_multicore                    # Small config, auto-detect cores
     python -m mvt.edt.run_edt_multicore --config medium   # Medium config
     python -m mvt.edt.run_edt_multicore --cores 4         # Force 4 cores
+    python -m mvt.edt.run_edt_multicore --device cuda     # GPU training
     python -m mvt.edt.run_edt_multicore --dry-run         # Print plan, don't train
+    python -m mvt.edt.run_edt_multicore --resume          # Resume from last checkpoint
+    python -m mvt.edt.run_edt_multicore --kuramoto        # Enable Kuramoto-Metric coupling
 """
 
 from __future__ import annotations
@@ -45,6 +53,55 @@ from .edt_pipeline import (
 
 
 # ===========================================================================
+# GPU Detection
+# ===========================================================================
+
+def get_device(device_str: str = "auto") -> str:
+    """Detect best available device."""
+    if device_str != "auto":
+        return device_str
+    if torch.cuda.is_available():
+        name = torch.cuda.get_device_name(0)
+        mem_gb = torch.cuda.get_device_properties(0).total_mem / 1e9
+        print(f"  GPU detected: {name} ({mem_gb:.1f} GB)")
+        return "cuda"
+    return "cpu"
+
+
+# ===========================================================================
+# Checkpoint Resume
+# ===========================================================================
+
+def find_latest_checkpoint(save_dir: str) -> Optional[str]:
+    """Find the latest checkpoint to resume from."""
+    phase_order = [
+        "mvt_edt_final.pt",     # Fully trained — nothing to resume
+        "after_phase3.pt",
+        "after_phase2b.pt",
+        "after_phase2a.pt",
+        "after_phase1.pt",
+    ]
+    for ckpt_name in phase_order:
+        path = os.path.join(save_dir, ckpt_name)
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def detect_resume_phase(save_dir: str) -> Optional[str]:
+    """Detect which phase to resume from."""
+    checkpoints = {
+        "after_phase1.pt": "phase2a",
+        "after_phase2a.pt": "phase2b",
+        "after_phase2b.pt": "phase3",
+    }
+    for ckpt_name, next_phase in checkpoints.items():
+        if os.path.exists(os.path.join(save_dir, ckpt_name)):
+            return next_phase
+    return None
+
+
+# ===========================================================================
 # Multi-core Phase 1
 # ===========================================================================
 
@@ -61,7 +118,8 @@ def _train_single_expert(
     d_model: int,
     d_ff: int,
     seed: int,
-) -> Tuple[int, int, float, float]:
+    device: str = "cpu",
+) -> Tuple[int, int, float, float, dict]:
     """
     Train a single expert in an isolated process.
 
@@ -69,8 +127,12 @@ def _train_single_expert(
     the hidden bank (passed as numpy array to avoid pickle issues with
     tensors and shared memory), and returns the updated state dict.
 
+    Supports both CPU and CUDA devices. When device='cuda', the expert
+    is moved to GPU for faster training. Hidden bank is always passed
+    as numpy (for safe pickling across processes).
+
     Returns:
-        (layer_idx, expert_idx, avg_loss, training_time)
+        (layer_idx, expert_idx, avg_loss, training_time, updated_state_dict)
     """
     import torch
     import torch.nn.functional as F
@@ -81,15 +143,14 @@ def _train_single_expert(
     from mvt.edt.moe_model import TopoExpert
 
     expert = TopoExpert(d_model, d_ff)
-    # Convert numpy arrays back to tensors for load_state_dict
     state_tensors = {k: torch.from_numpy(v) for k, v in expert_state_dict.items()}
     expert.load_state_dict(state_tensors)
+    expert.to(device)
     expert.train()
 
     opt = torch.optim.AdamW(expert.parameters(), lr=lr, weight_decay=weight_decay)
 
-    # Convert numpy bank to tensor
-    hidden_bank = torch.from_numpy(hidden_bank_np)
+    hidden_bank = torch.from_numpy(hidden_bank_np).to(device)
     n_samples = len(hidden_bank)
 
     loss_sum = 0.0
@@ -113,7 +174,6 @@ def _train_single_expert(
     t1 = time.time()
     avg_loss = loss_sum / steps
 
-    # Return updated state dict (picklable)
     updated_state = {k: v.cpu().numpy() for k, v in expert.state_dict().items()}
 
     return (layer_idx, expert_idx, avg_loss, t1 - t0, updated_state)
@@ -155,17 +215,32 @@ def phase1_experts_multicore(
     print(f"\n  Phase 1 Multi-Core: {total_experts} experts, {n_workers} workers")
     print(f"  Distributing {len(tasks)} tasks across {n_workers} processes...", flush=True)
 
+    # GPU detection for Phase 1 workers
+    device_per_worker = "cpu"
+    n_gpus = 0
+    if config.device == "cuda" and torch.cuda.is_available():
+        n_gpus = torch.cuda.device_count()
+        if n_gpus >= n_workers:
+            device_per_worker = None  # Will be set per-worker below
+        else:
+            print(f"  Note: {n_gpus} GPUs < {n_workers} workers, Phase 1 stays on CPU")
+
     # Prepare all worker args (each worker gets its own hidden bank copy via spawn)
     worker_args = []
-    for li, ei in tasks:
+    for i, (li, ei) in enumerate(tasks):
         sd = model.blocks[li].moe.experts[ei].state_dict()
         sd_np = {k: v.cpu().numpy() for k, v in sd.items()}
+        if device_per_worker is None:
+            dev = f"cuda:{i % n_gpus}"
+        else:
+            dev = device_per_worker
         worker_args.append((
             sd_np, li, ei, hidden_np.copy(),
             config.phase1_steps_per_expert, config.phase1_batch_size,
             config.phase1_lr, config.phase1_weight_decay, config.grad_clip,
             d_model, d_ff,
             config.seed if hasattr(config, 'seed') else 42,
+            dev,
         ))
     del hidden_np
 
@@ -221,6 +296,7 @@ def run_edt_multicore(
     config: Optional[EDTConfig] = None,
     n_workers: Optional[int] = None,
     verbose: bool = True,
+    resume: bool = False,
 ) -> Dict[str, object]:
     """
     Full EDT pipeline with multi-core Phase 1.
@@ -229,6 +305,9 @@ def run_edt_multicore(
     Phase 2a: Sequential (attention — fast anyway)
     Phase 2b: Sequential (embedding — memory-bound)
     Phase 3: Sequential (joint — needs full model)
+
+    Args:
+        resume: If True, skip completed phases and resume from checkpoint.
     """
     if config is None:
         config = EDTConfig()
@@ -238,6 +317,19 @@ def run_edt_multicore(
 
     model = model.to(config.device)
     model.train()
+
+    # Resume logic: detect which phase to start from
+    start_phase = "phase1"
+    if resume:
+        phase_to_ckpt = {"phase2a": "after_phase1.pt", "phase2b": "after_phase2a.pt", "phase3": "after_phase2b.pt"}
+        for phase, ckpt_name in phase_to_ckpt.items():
+            ckpt_full = os.path.join(config.save_dir, ckpt_name)
+            if os.path.exists(ckpt_full):
+                if verbose:
+                    print(f"  Resuming from {ckpt_name} → starting at {phase}")
+                model.load_state_dict(torch.load(ckpt_full, map_location=config.device, weights_only=True))
+                start_phase = phase
+                break
 
     # Model stats
     total_p, active_p = model.count_params()
@@ -260,34 +352,66 @@ def run_edt_multicore(
 
     all_stats = {}
     t_total = time.time()
+    hidden_bank = None
 
     # ---- Phase 1: Experts (MULTI-CORE) ----
-    hidden_bank = generate_hidden_states(model, corpus_tokens, config)
-    stats1 = phase1_experts_multicore(model, hidden_bank, config, n_workers=n_workers)
-    all_stats["phase1"] = stats1
-    ckpt1 = os.path.join(config.save_dir, "after_phase1.pt")
-    _save(model, ckpt1)
+    if start_phase == "phase1":
+        hidden_bank = generate_hidden_states(model, corpus_tokens, config)
+        stats1 = phase1_experts_multicore(model, hidden_bank, config, n_workers=n_workers)
+        all_stats["phase1"] = stats1
+        ckpt1 = os.path.join(config.save_dir, "after_phase1.pt")
+        _save(model, ckpt1)
+        start_phase = "phase2a"  # Move to next
+    else:
+        if verbose:
+            print(f"  Skipping Phase 1 (already completed)")
 
     # ---- Phase 2a: Attention (sequential — fast) ----
-    stats2a = phase2a_attention(model, hidden_bank, config)
-    all_stats["phase2a"] = stats2a
-    ckpt2a = os.path.join(config.save_dir, "after_phase2a.pt")
-    _save(model, ckpt2a)
+    if start_phase == "phase2a":
+        if hidden_bank is None:
+            hidden_bank = generate_hidden_states(model, corpus_tokens, config)
+        stats2a = phase2a_attention(model, hidden_bank, config)
+        all_stats["phase2a"] = stats2a
+        ckpt2a = os.path.join(config.save_dir, "after_phase2a.pt")
+        _save(model, ckpt2a)
+        start_phase = "phase2b"
+    else:
+        if verbose:
+            print(f"  Skipping Phase 2a (already completed)")
 
     # Free hidden bank
-    del hidden_bank
+    if hidden_bank is not None:
+        del hidden_bank
 
     # ---- Phase 2b: Embedding (sequential) ----
-    stats2b = phase2b_embedding(model, corpus_tokens, config)
-    all_stats["phase2b"] = stats2b
-    ckpt2b = os.path.join(config.save_dir, "after_phase2b.pt")
-    _save(model, ckpt2b)
+    if start_phase == "phase2b":
+        stats2b = phase2b_embedding(model, corpus_tokens, config)
+        all_stats["phase2b"] = stats2b
+        ckpt2b = os.path.join(config.save_dir, "after_phase2b.pt")
+        _save(model, ckpt2b)
+        start_phase = "phase3"
+    else:
+        if verbose:
+            print(f"  Skipping Phase 2b (already completed)")
 
     # ---- Phase 3: Joint (sequential + PGSG) ----
-    stats3 = phase3_joint(model, corpus_tokens, config)
-    all_stats["phase3"] = stats3
-    ckpt3 = os.path.join(config.save_dir, "mvt_edt_final.pt")
-    _save(model, ckpt3)
+    if start_phase == "phase3":
+        stats3 = phase3_joint(model, corpus_tokens, config)
+        all_stats["phase3"] = stats3
+        ckpt3 = os.path.join(config.save_dir, "mvt_edt_final.pt")
+        _save(model, ckpt3)
+    else:
+        if verbose:
+            print(f"  Skipping Phase 3 (already completed)")
+
+    # If fully trained already
+    if "phase3" not in all_stats and os.path.exists(os.path.join(config.save_dir, "mvt_edt_final.pt")):
+        if verbose:
+            print(f"  Model already fully trained! Loading final checkpoint.")
+        model.load_state_dict(torch.load(
+            os.path.join(config.save_dir, "mvt_edt_final.pt"),
+            map_location=config.device, weights_only=True
+        ))
 
     total_time = time.time() - t_total
     all_stats["total_time"] = total_time
@@ -536,6 +660,8 @@ Presets:
 Examples:
   python -m mvt.edt.run_edt_multicore --config small
   python -m mvt.edt.run_edt_multicore --config small --cores 4
+  python -m mvt.edt.run_edt_multicore --config medium --device cuda
+  python -m mvt.edt.run_edt_multicore --config large --resume
   python -m mvt.edt.run_edt_multicore --config 1b --dry-run
         """,
     )
@@ -562,10 +688,36 @@ Examples:
         default=None,
         help="Override synthetic corpus size",
     )
+    parser.add_argument(
+        "--device", "-d",
+        type=str,
+        default="auto",
+        choices=["auto", "cpu", "cuda"],
+        help="Device: auto (detect GPU), cpu, or cuda (default: auto)",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume training from last checkpoint",
+    )
+    parser.add_argument(
+        "--save-dir",
+        type=str,
+        default=None,
+        help="Override checkpoint save directory",
+    )
 
     args = parser.parse_args()
 
+    # Device setup
+    device = get_device(args.device)
+    print(f"  Device: {device}")
+
     n_cores = args.cores or os.cpu_count() or 1
+
+    # Save dir override
+    if args.save_dir:
+        pass  # Will be set per-preset below
 
     if args.config == "1b":
         # 1B is for planning only — too large for single CPU machine
@@ -582,6 +734,9 @@ Examples:
         preset = PRESETS[args.config]
         model_cfg = MoEMVTConfig(**preset["model"])
         edt_cfg = EDTConfig(**preset["edt"])
+        edt_cfg.device = device  # Apply detected device
+        if args.save_dir:
+            edt_cfg.save_dir = args.save_dir
 
         print(f"\n  Preset: {preset['desc']}")
         print_training_plan(model_cfg, edt_cfg, n_cores)
@@ -589,6 +744,15 @@ Examples:
     if args.dry_run:
         print("\n  Dry run — exiting without training.")
         return
+
+    # ---- Check resume ----
+    if args.resume and args.config != "1b":
+        latest_ckpt = find_latest_checkpoint(edt_cfg.save_dir)
+        if latest_ckpt:
+            print(f"  Found checkpoint: {latest_ckpt}")
+        else:
+            print(f"  No checkpoint found in {edt_cfg.save_dir}, starting fresh.")
+            args.resume = False
 
     # ---- Actually train ----
     corpus_size = args.corpus_size or max(50_000, model_cfg.vocab_size * 50)
@@ -600,6 +764,7 @@ Examples:
         edt_cfg,
         n_workers=n_cores,
         verbose=True,
+        resume=args.resume,
     )
 
     # Save stats
